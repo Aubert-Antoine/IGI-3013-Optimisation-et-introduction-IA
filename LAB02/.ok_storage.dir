@@ -1,0 +1,4 @@
+'sampling_scalars-correct', (0, 66)
+'sampling_vectors-correct', (512, 66)
+'compute_costs-correct', (1024, 66)
+'find_minimum-correct', (1536, 66)
