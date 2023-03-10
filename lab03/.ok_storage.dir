@@ -1,0 +1,6 @@
+'state-correct', (0, 66)
+'next_moves-correct', (512, 66)
+'column_height-correct', (1024, 66)
+'total_height-correct', (1536, 66)
+'complete_lines-correct', (2048, 66)
+'number_holes-correct', (2560, 66)
