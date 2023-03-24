@@ -1,0 +1,133 @@
+[
+    {
+        "question": "What is a global minimum?",
+        "choices": [
+            "A point attaining the highest value of the function",
+            "A point attaining the lowest value of the function",
+            "A point attaining the lowest value of the function in a sufficiently small neighbor",
+            "A point where the gradient is equal to zero"
+        ],
+        "correct": [
+            1
+        ]
+    },
+    {
+        "question": "What is a local minimum?",
+        "choices": [
+            "A point attaining the highest value of the function",
+            "A point attaining the lowest value of the function",
+            "A point attaining the lowest value of the function in a sufficiently small neighbor",
+            "A point where the gradient is equal to zero"
+        ],
+        "correct": [
+            2
+        ]
+    },
+    {
+        "question": "What is a stationary point?",
+        "choices": [
+            "A point attaining the highest value of the function",
+            "A point attaining the lowest value of the function",
+            "A point attaining the lowest value of the function in a sufficiently small neighbor",
+            "A point where the gradient is equal to zero"
+        ],
+        "correct": [
+            3
+        ]
+    },
+    {
+        "question": "Which of the following functions are coercive?",
+        "choices": [
+            "x",
+            "x^2",
+            "x^3",
+            "x^4",
+            "1/x"
+        ],
+        "correct": [
+            1,
+            3
+        ]
+    },
+    {
+        "question": "When a function is guaranteed to have *at least* one minimum?",
+        "choices": [
+            "When the function is continuous",
+            "When the function is coercive",
+            "When the function is continuous and coercive",
+            "When the function is differentiable and coercive",
+            "None of the above"
+        ],
+        "correct": [
+            2,
+            3
+        ]
+    },
+    {
+        "question": "When a function is guaranteed to have *exactly* one minimum?",
+        "choices": [
+            "When the function is convex",
+            "When the function is strictly convex",
+            "When the function is strongly convex",
+            "When the function is nonconvex"
+        ],
+        "correct": [
+            2
+        ]
+    },
+    {
+        "question": "Which of the following problems are equivalent?",
+        "choices": [
+            "minimize J(w)  and  maximize J(w)",
+            "minimize J(w)  and  minimize 2 J(w) + 4",
+            "minimize J(w)  and  minimize log( J(w) )",
+            "minimize J(w)  and  maximize -log( J(w) )"
+        ],
+        "correct": [
+            1,
+            2,
+            3
+        ]
+    },
+    {
+        "question": "About the *grid search* method (check all that apply)",
+        "choices": [
+            "A multitude of points are evaluated at once",
+            "It works well with high-dimensional functions",
+            "It may get stuck into a local minimum",
+            "It is a global optimization method"
+        ],
+        "correct": [
+            0,
+            3
+        ]
+    },
+    {
+        "question": "About the *random search* method (check all that apply)",
+        "choices": [
+            "It is a local optimization method",
+            "Multiple search directions are evaluated at each iteration",
+            "It works well with high-dimensional functions",
+            "It may get stuck into a local minimum"
+        ],
+        "correct": [
+            0,
+            1,
+            3
+        ]
+    },
+    {
+        "question": "About the *cross-entropy* method (check all that apply)",
+        "choices": [
+            "It is a stochastic optimization method",
+            "Multiple points are sampled at each iteration",
+            "All the sampled points are used to update the current distribution",
+            "It is likely to converge to a global minimum"
+        ],
+        "correct": [
+            0,
+            1,
+            3
+        ]
+    }
+]
