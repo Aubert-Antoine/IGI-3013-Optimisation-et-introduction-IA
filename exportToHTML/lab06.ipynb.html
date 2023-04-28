@@ -1,0 +1,776 @@
+<html>
+<head>
+<title>lab06.ipynb</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<style type="text/css">
+.s0 { color: #5c6370;}
+.s1 { color: #bbbbbb;}
+.s2 { color: #d55fde;}
+.s3 { color: #d19a66;}
+.s4 { color: #89ca78;}
+</style>
+</head>
+<body bgcolor="#282c34">
+<table CELLSPACING=0 CELLPADDING=5 COLS=1 WIDTH="100%" BGCOLOR="#606060" >
+<tr><td><center>
+<font face="Arial, Helvetica" color="#000000">
+lab06.ipynb</font>
+</center></td></tr></table>
+<pre><span class="s0">#%% md 
+</span><span class="s1"># Lab 6: Problem solving 
+ 
+This ungraded assignment is a collection of 10 engineering problems that can be solved by optimization. In order to understand and solve the exercises, and more generally to gain the maximum benefit from this assignment, it is highly recommended that you revise **Chapter 4** and **Chapter 5** in the course notes available on [Blackboard](https://esiee.blackboard.com/). 
+</span><span class="s0">#%% md 
+</span><span class="s1">## Instructions 
+ 
+ - Download a copy of this notebook from [Blackboard](https://esiee.blackboard.com/). 
+  
+  
+ - Run `jupyter notebook` and open the `.ipynb` file. 
+   - *Keep the notebook inside the folder it was downloaded with.* 
+ 
+ 
+ - **Work alone or with a partner** to solve the quizzes.  
+   - *You are supposed to create new cells for each quiz and fill them with your solutions*  
+</span><span class="s0">#%% md 
+</span><span class="s1">## Content 
+ 
+| Activity | Topic | Difficulty 
+|:----------|:------|:--------| 
+| [Quiz 1](#Quiz-1) | Travel time | Easy 
+| [Quiz 2](#Quiz-2) | Facility location | Easy 
+| [Quiz 3](#Quiz-3) | Area fencing | Easy 
+| [Quiz 4](#Quiz-4) | Topless box | Easy 
+| | --- 
+| [Quiz 5](#Quiz-5) | Distance between polyhedra | Medium 
+| [Quiz 6](#Quiz-6) | Inscribed circle | Medium 
+| [Quiz 7](#Quiz-7) | Shortest path | Medium 
+| [Quiz 8](#Quiz-8) | Trilateration | Medium 
+| | --- 
+| [Quiz 9](#Quiz-9) | Resection | Hard 
+| [Quiz 10](#Quiz-10) | Optimal trajectory | Hard 
+</span><span class="s0">#%% md 
+</span><span class="s1">## Required packages 
+ 
+For this assignment, you need to import the following packages. 
+- [**Numpy**](www.numpy.org) - The library for scientific computing in Python. 
+- [**Matplotlib**](http://matplotlib.org) - The library for plotting graphs in Python. 
+- [**Autograd**](https://github.com/HIPS/autograd) - The library for automatic differentiation of Numpy code. 
+ 
+**Installation:** Open the terminal ('Anaconda Prompt' on Windows) and execute the following command. 
+ 
+``` 
+pip install autograd 
+``` 
+ 
+Add the flag `--user` for a local installation (only if you are *not* the admin). 
+</span><span class="s0">#%% 
+</span><span class="s2">import </span><span class="s1">autograd.numpy </span><span class="s2">as </span><span class="s1">np</span>
+<span class="s2">import </span><span class="s1">matplotlib.pyplot </span><span class="s2">as </span><span class="s1">plt</span>
+<span class="s0">#%% md 
+</span><span class="s1">Here is a general-purpose implementation of projected gradient descent. Use this function for solving the exercises. 
+</span><span class="s0">#%% 
+</span><span class="s2">def </span><span class="s1">gradient_descent(cost_fun, init, alpha, epochs, project=</span><span class="s2">lambda </span><span class="s1">w: w):</span>
+    <span class="s0">&quot;&quot;&quot; 
+    Arguments 
+    --------- 
+     cost_fun - Function to minimize             | Callable that takes an array and returns a scalar 
+         init - Initialization                   | Array of the shape expected by 'cost_fun' 
+        alpha - Step size                        | Scalar 
+       epochs - Number of iterations             | Integer 
+      project - Projection onto the feasible set | Callable that takes an array and returns an array 
+         
+    Returns 
+    ------- 
+     params - Solution found by gradient descent 
+    history - List of function evaluations 
+    &quot;&quot;&quot;</span>
+    
+    <span class="s0"># Automatic gradient</span>
+    <span class="s2">from </span><span class="s1">autograd </span><span class="s2">import </span><span class="s1">grad </span>
+    <span class="s1">gradient = grad(cost_fun)</span>
+
+    <span class="s0"># Initialization</span>
+    <span class="s1">w = np.array(init, dtype=float)</span>
+    <span class="s1">v = </span><span class="s3">0</span>
+    <span class="s1">k = </span><span class="s3">0</span>
+    
+    <span class="s0"># Iterative refinement</span>
+    <span class="s1">history = []</span>
+    <span class="s2">for </span><span class="s1">_ </span><span class="s2">in </span><span class="s1">range(epochs):</span>
+        
+        <span class="s0"># Projected gradient step</span>
+        <span class="s1">u = v</span>
+        <span class="s1">g = gradient(w)</span>
+        <span class="s1">v = project(w - alpha * g)</span>
+        
+        <span class="s0"># Adaptive restart</span>
+        <span class="s2">if </span><span class="s1">np.ravel(g) @ np.ravel(v - u) &lt;= </span><span class="s3">0</span><span class="s1">:</span>
+            <span class="s1">k = k + </span><span class="s3">1</span>
+        <span class="s2">else</span><span class="s1">:</span>
+            <span class="s1">k = </span><span class="s3">1</span>
+
+        <span class="s0"># Acceleration</span>
+        <span class="s1">w = v + (k-</span><span class="s3">1</span><span class="s1">)/(k+</span><span class="s3">2</span><span class="s1">) * (v - u)</span>
+        
+        <span class="s0"># Bookkeping</span>
+        <span class="s1">history += [cost_fun(w)]</span>
+            
+    <span class="s2">return </span><span class="s1">w,  history</span>
+<span class="s0">#%% 
+</span><span class="s2">def </span><span class="s1">plot_history_2d(history, cost_fun, xlim, ylim, zlim):</span>
+    <span class="s1">a_values, b_values = np.meshgrid(np.linspace(*xlim), np.linspace(*ylim))</span>
+    <span class="s1">J_values = [cost_fun([a,b]) </span><span class="s2">for </span><span class="s1">a,b </span><span class="s2">in </span><span class="s1">zip(a_values.flat, b_values.flat)]</span>
+    <span class="s1">J_values = np.reshape(J_values, a_values.shape)</span>
+    <span class="s1">levels = np.logspace(*zlim, </span><span class="s3">10</span><span class="s1">)</span>
+    <span class="s2">from </span><span class="s1">matplotlib.colors </span><span class="s2">import </span><span class="s1">LogNorm</span>
+    <span class="s1">fig = plt.figure(figsize=(</span><span class="s3">14</span><span class="s1">,</span><span class="s3">5</span><span class="s1">), facecolor=</span><span class="s4">'white'</span><span class="s1">)</span>
+    <span class="s1">plt.subplot(</span><span class="s3">121</span><span class="s1">)</span>
+    <span class="s1">plt.contour(a_values, b_values, J_values, levels=levels, norm=LogNorm(), alpha=</span><span class="s3">.4</span><span class="s1">, colors = </span><span class="s4">'k'</span><span class="s1">)</span>
+    <span class="s1">plt.contourf(a_values, b_values, J_values, levels=levels, norm=LogNorm(), alpha=</span><span class="s3">.4</span><span class="s1">, cmap=</span><span class="s4">'jet'</span><span class="s1">)</span>
+    <span class="s1">plt.plot(history[:,</span><span class="s3">0</span><span class="s1">], history[:,</span><span class="s3">1</span><span class="s1">], </span><span class="s4">'-o'</span><span class="s1">, lw=</span><span class="s3">2</span><span class="s1">, mfc=</span><span class="s4">'w'</span><span class="s1">, ms=</span><span class="s3">8</span><span class="s1">, zorder=</span><span class="s3">2</span><span class="s1">)</span>
+    <span class="s1">plt.title(</span><span class="s4">'Points generated by gradient descent'</span><span class="s1">)</span>
+    <span class="s1">plt.subplot(</span><span class="s3">122</span><span class="s1">)</span>
+    <span class="s1">plt.plot([cost_fun(w) </span><span class="s2">for </span><span class="s1">w </span><span class="s2">in </span><span class="s1">history], lw=</span><span class="s3">2</span><span class="s1">)</span>
+    <span class="s1">plt.title(</span><span class="s4">'Convergence plot'</span><span class="s1">)</span>
+    <span class="s1">plt.show()</span>
+
+<span class="s2">def </span><span class="s1">plot_history_1d(history, cost_fun, wmin, wmax):</span>
+    <span class="s1">fig = plt.figure(figsize=(</span><span class="s3">12</span><span class="s1">,</span><span class="s3">4</span><span class="s1">), facecolor=</span><span class="s4">'white'</span><span class="s1">)</span>
+    <span class="s1">plt.subplot(</span><span class="s3">121</span><span class="s1">)</span>
+    <span class="s1">t = np.linspace(wmin,wmax)</span>
+    <span class="s1">plt.plot(t, cost_fun(t), </span><span class="s4">'k'</span><span class="s1">)</span>
+    <span class="s1">plt.plot(history, cost_fun(history), </span><span class="s4">'o'</span><span class="s1">, mfc=</span><span class="s4">'w'</span><span class="s1">, ms=</span><span class="s3">8</span><span class="s1">)</span>
+    <span class="s1">plt.title(</span><span class="s4">'Points generated by gradient descent'</span><span class="s1">)</span>
+    <span class="s1">plt.subplot(</span><span class="s3">122</span><span class="s1">)</span>
+    <span class="s1">plt.plot([cost_fun(w) </span><span class="s2">for </span><span class="s1">w </span><span class="s2">in </span><span class="s1">history], lw=</span><span class="s3">2</span><span class="s1">)</span>
+    <span class="s1">plt.title(</span><span class="s4">'Convergence plot'</span><span class="s1">)</span>
+    <span class="s1">plt.show()</span>
+<span class="s0">#%% md 
+</span><span class="s1">## IMPORTANT: Read carefully!!! 
+ 
+Not all the NumPy features can be used with Autograd. Here is the list of operations that you **must avoid** inside your cost functions. 
+ 
+  &gt; - **Don't** use assignment to arrays `A[0,0] = x`, `A[:,1] = y`, ... 
+      - Create new arrays through vectorized operations! 
+ 
+  &gt; - **Don't** create lists `w = [x, y]` 
+      - Create new arrays: `w = np.array([x, y])` 
+ 
+  &gt; - **Don't** implicitly cast lists to arrays `A = np.sum([x, y])`  
+      - Use explicit casts: `A = np.sum(np.array([x, y]))` 
+ 
+  &gt; - **Don't** use in-place operations such as `a += b`  
+      - Use binary operations: `a = a + b` 
+ 
+  &gt; - **Don't** use the operation `A.dot(B)`  
+      - Use the operator: `A @ B` 
+       
+  &gt; - **Never** execute the line `import numpy as np` 
+      - Use the line: `import autograd.numpy as np` 
+       
+&lt;!-- **NEVER** execute the line **`import numpy as np`** anywhere in the notebook, otherwise Autograd won't work properly. Just make sure to execute the cells above, which specifically imports Autograd with the line **`import autograd.numpy as np`**. --&gt; 
+</span><span class="s0">#%% md 
+</span><span class="s1">## Quiz 1 
+ 
+&gt; **Fastest travel time.** An island is 2 miles due north of its closest point along a straight shoreline. A visitor is staying at a cabin on the shore that is 6 miles west of that point. The visitor is planning to go from the cabin to the island. Suppose the visitor runs at a rate of 8 miles per hour, swims at a rate of 3 miles per hour. How far should the visitor run before swimming to minimize the time it takes to reach the island? 
+ 
+*Hint:* ${\sf speed} = \frac{\sf distance}{\sf time}$ 
+ 
+&lt;!-- ![](../images/travel_time.jpeg) --&gt; 
+ 
+![travel_time.jpeg](attachment:travel_time.jpeg) 
+</span><span class="s0">#%% 
+</span><span class="s1">distance_y = </span><span class="s2">lambda </span><span class="s1">x : np.sqrt(np.power(x,</span><span class="s3">2</span><span class="s1">) - </span><span class="s3">12</span><span class="s1">*x + </span><span class="s3">40</span><span class="s1">)</span>
+<span class="s1">distance_x = </span><span class="s2">lambda </span><span class="s1">x : x</span>
+
+<span class="s1">J = </span><span class="s2">lambda </span><span class="s1">x : distance_x(x)/</span><span class="s3">8 </span><span class="s1">+ distance_y(x)/</span><span class="s3">3</span>
+
+<span class="s1">grad = gradient_descent(J, init=[</span><span class="s3">3</span><span class="s1">], alpha=</span><span class="s3">0.3</span><span class="s1">, epochs= </span><span class="s3">100</span><span class="s1">)</span>
+<span class="s0">#%% 
+</span><span class="s1">print(grad[</span><span class="s3">0</span><span class="s1">])</span>
+<span class="s0">#%% md 
+</span><span class="s1">Solution opti $=5,19$ 
+</span><span class="s0">#%% md 
+</span><span class="s1">## Quiz 2 
+ 
+&gt; **Facility location.** The village of Optimia consists of a single kilometer-long straight road with five houses built along it. The road has distance markings. The first house is built at marking 0, the second at marking 0.2, the third at 0.4, the fourth at 0.9 and the fifth at 1.0. The villagers wish to embrace the marvels of the internet, and want to build one or two data centers somewhere along their central road. The five houses will be connected to a data center with separate cables, whose prices are somehow dependent on their length. 
+ 
+ 
+&lt;!-- ![](../images/village.png) --&gt; 
+ 
+![village.png](attachment:village.png) 
+</span><span class="s0">#%% md 
+</span>
+<span class="s0">#%% md 
+</span><span class="s1">### Question 1 
+ 
+**Suppose only one data center is built.** If the data center is placed at position $c$ along the road, the price for cabling the house at marking $x_i$ is 
+ 
+$$ p_i = |x_i - c|. $$ 
+ 
+At what position along the road should the villagers build the data center in order to optimize the total cabling cost of all houses? Compare your solution to the median of the house markings. 
+</span><span class="s0">#%% 
+</span><span class="s1">house_mark = np.array([</span><span class="s3">0.0</span><span class="s1">, </span><span class="s3">0.2</span><span class="s1">, </span><span class="s3">0.4</span><span class="s1">, </span><span class="s3">0.9</span><span class="s1">, </span><span class="s3">1</span><span class="s1">])</span>
+
+<span class="s1">J = </span><span class="s2">lambda </span><span class="s1">c : np.sum(np.abs(house_mark - c))</span>
+
+<span class="s1">grad = gradient_descent(J, init=[</span><span class="s3">0</span><span class="s1">], alpha=</span><span class="s3">0.001</span><span class="s1">, epochs= </span><span class="s3">40</span><span class="s1">)</span>
+<span class="s0">#%% 
+</span><span class="s1">print(grad[</span><span class="s3">0</span><span class="s1">])</span>
+<span class="s1">plt.plot([_ </span><span class="s2">for </span><span class="s1">_ </span><span class="s2">in </span><span class="s1">grad[</span><span class="s3">1</span><span class="s1">]])</span>
+<span class="s0">#%% md 
+</span><span class="s1">### Question 2 
+ 
+**Suppose two data centers are built.** Each house would only need to set up a single cable to the closer of the two data centers. If the latter are placed at positions $c_1$ and $c_2$ along the road, the price for cabling the house at marking $x_i$ is  
+ 
+$$p_i = \min\big\{|x_i - c_1|, |x_i - c_2|\big\}.$$ 
+ 
+At what position along the road should the villagers build the data centers in order to optimize the total cabling cost of all houses? 
+</span><span class="s0">#%% 
+</span><span class="s2">def </span><span class="s1">cost(x):</span>
+    <span class="s1">pos = np.array([</span><span class="s3">0</span><span class="s1">, </span><span class="s3">0.2</span><span class="s1">, </span><span class="s3">0.4</span><span class="s1">, </span><span class="s3">0.9</span><span class="s1">, </span><span class="s3">1</span><span class="s1">])</span>
+    <span class="s1">dist1 = np.abs(pos - x[</span><span class="s3">0</span><span class="s1">])</span>
+    <span class="s1">dist2 = np.abs(pos - x[</span><span class="s3">1</span><span class="s1">])</span>
+    <span class="s2">return </span><span class="s1">np.sum(np.minimum(dist1, dist2))</span>
+
+<span class="s1">print(cost(x=[</span><span class="s3">.1</span><span class="s1">, </span><span class="s3">.9</span><span class="s1">]))</span>
+<span class="s1">init = np.random.rand(</span><span class="s3">2</span><span class="s1">)</span>
+
+<span class="s1">grad = gradient_descent(cost, init, alpha=</span><span class="s3">0.001</span><span class="s1">, epochs= </span><span class="s3">40</span><span class="s1">)</span>
+<span class="s1">print(grad[</span><span class="s3">0</span><span class="s1">])</span>
+<span class="s1">plt.plot([_ </span><span class="s2">for </span><span class="s1">_ </span><span class="s2">in </span><span class="s1">grad[</span><span class="s3">1</span><span class="s1">]])</span>
+<span class="s0">#%% md 
+</span><span class="s1">## Quiz 3 
+ 
+&gt; **Maximum area fencing.**  A rectangular field needs to be enclosed with 500 meters of fencing material. There is a river on one side of the field which won’t need any fencing. Determine the dimensions of the field that will enclose the largest area. 
+ 
+&lt;!--![](../images/fencing_area.png)--&gt; 
+ 
+![fencing_area.png](attachment:fencing_area.png) 
+ 
+*Hint:* Maximizing the function $J({\bf w})$ is equivalent to minimizing the function $-J({\bf w})$. 
+ 
+ 
+</span><span class="s0">#%% 
+# max( x*y ) | x+2y=500</span>
+<span class="s0"># x = 500 - 2y</span>
+
+<span class="s2">def </span><span class="s1">cost(y_side) :</span>
+    <span class="s2">return </span><span class="s1">-((</span><span class="s3">500 </span><span class="s1">- (</span><span class="s3">2</span><span class="s1">*y_side))*y_side)</span>
+
+
+<span class="s0"># *****     grad func    *****</span>
+<span class="s0"># ****************************</span>
+<span class="s1">init = np.array([</span><span class="s3">50</span><span class="s1">])</span>
+<span class="s1">alpha=</span><span class="s3">0.00001</span>
+<span class="s1">epochs= </span><span class="s3">4000</span>
+
+<span class="s0"># *****     plot func    *****</span>
+<span class="s1">grad = gradient_descent(cost, init, alpha, epochs)</span>
+<span class="s1">print(grad[</span><span class="s3">0</span><span class="s1">])</span>
+<span class="s1">plt.plot([_ </span><span class="s2">for </span><span class="s1">_ </span><span class="s2">in </span><span class="s1">grad[</span><span class="s3">1</span><span class="s1">]])</span>
+<span class="s0">#%% md 
+</span><span class="s1">## Quiz 4 
+ 
+&gt; **Cheapest box.** You want to build an open-top box with a square base and a volume of 216 cm3. What should the dimensions of the box be to minimize the surface area of the box? 
+ 
+&lt;!-- ![](../images/open_box.png) --&gt; 
+ 
+![open_box.png](attachment:open_box.png) 
+</span><span class="s0">#%% 
+</span><span class="s2">def </span><span class="s1">cost() :</span>
+    <span class="s2">return </span><span class="s1">...</span>
+
+
+<span class="s0"># *****     grad func    *****</span>
+<span class="s0"># ****************************</span>
+<span class="s1">init = np.array([</span><span class="s3">50</span><span class="s1">])</span>
+<span class="s1">alpha=</span><span class="s3">0.00001</span>
+<span class="s1">epochs= </span><span class="s3">4000</span>
+
+<span class="s0"># *****     plot func    *****</span>
+<span class="s1">grad = gradient_descent(cost, init, alpha, epochs)</span>
+<span class="s1">print(grad[</span><span class="s3">0</span><span class="s1">])</span>
+<span class="s1">plt.plot([_ </span><span class="s2">for </span><span class="s1">_ </span><span class="s2">in </span><span class="s1">grad[</span><span class="s3">1</span><span class="s1">]])</span>
+<span class="s0">#%% md 
+</span><span class="s1">## Quiz 5 
+ 
+&gt; **Distance between polyhedra.** Let $\mathcal{C}_1$ and $\mathcal{C}_2$ be two polyhedra described by the two sets of linear inequalities $A_1 {\bf x} \le {\bf b}_1$ and $A_2 {\bf y} \le {\bf b}_2$, respectively. Find the distance between the closest pair of points, one in $\mathcal{C}_1$ and the other in $\mathcal{C}_2$. 
+ 
+ 
+![polygons.png](attachment:polygons.png) 
+ 
+*Hints:*  
+ - The projection of a point $({\bf x}, {\bf y}) \in \mathbb{R}^2\times\mathbb{R}^2$ onto the separable set $\mathcal{C} = \mathcal{C}_1 \times \mathcal{C}_2$ is equal to $\mathcal{P}_{\mathcal{C}}({\bf x}, {\bf y}) = \big(\mathcal{P}_{\mathcal{C}_1}({\bf x}), \mathcal{P}_{\mathcal{C}_2}({\bf y})\big)$. 
+ - Useful functions: `project_poly` (see below), `np.concatenate`. 
+</span><span class="s0">#%% 
+</span><span class="s2">def </span><span class="s1">create_poly(center = (</span><span class="s3">0</span><span class="s1">,</span><span class="s3">0</span><span class="s1">)):</span>
+    <span class="s0">&quot;&quot;&quot; 
+    Generate a random polyhedron, roughly centered at the given point. 
+    &quot;&quot;&quot;</span>
+    <span class="s2">from </span><span class="s1">scipy.spatial </span><span class="s2">import </span><span class="s1">ConvexHull</span>
+    <span class="s1">points = center + np.random.randn(</span><span class="s3">30</span><span class="s1">, </span><span class="s3">2</span><span class="s1">)</span>
+    <span class="s1">hull = ConvexHull(points)    </span>
+    <span class="s1">A = hull.equations[:,:</span><span class="s3">2</span><span class="s1">]</span>
+    <span class="s1">b = -hull.equations[:,</span><span class="s3">2</span><span class="s1">]</span>
+    <span class="s1">v = points[hull._vertices]</span>
+    <span class="s2">return </span><span class="s1">A, b, v</span>
+
+
+<span class="s2">def </span><span class="s1">plot_poly(v1, v2, x=</span><span class="s2">None</span><span class="s1">, y=</span><span class="s2">None</span><span class="s1">):</span>
+    <span class="s0">&quot;&quot;&quot; 
+    Display two polygons given their vertexes, and a line between two points (if given). 
+    &quot;&quot;&quot;</span>
+    <span class="s1">plt.fill(v1[:,</span><span class="s3">0</span><span class="s1">], v1[:,</span><span class="s3">1</span><span class="s1">], v2[:,</span><span class="s3">0</span><span class="s1">], v2[:,</span><span class="s3">1</span><span class="s1">], alpha=</span><span class="s3">0.6</span><span class="s1">)</span>
+    <span class="s1">plt.axis(</span><span class="s4">'off'</span><span class="s1">)</span>
+    <span class="s1">plt.axis(</span><span class="s4">'equal'</span><span class="s1">)</span>
+    <span class="s2">if </span><span class="s1">x </span><span class="s2">is not None and </span><span class="s1">y </span><span class="s2">is not None</span><span class="s1">:</span>
+        <span class="s1">plt.plot([x[</span><span class="s3">0</span><span class="s1">],y[</span><span class="s3">0</span><span class="s1">]], [x[</span><span class="s3">1</span><span class="s1">], y[</span><span class="s3">1</span><span class="s1">]], </span><span class="s4">'o--'</span><span class="s1">, c=</span><span class="s4">'tab:red'</span><span class="s1">, lw=</span><span class="s3">2</span><span class="s1">, mfc=</span><span class="s4">'w'</span><span class="s1">, mew=</span><span class="s3">2</span><span class="s1">, ms=</span><span class="s3">8</span><span class="s1">)</span>
+
+        
+<span class="s2">def </span><span class="s1">project_poly(u, A, b):</span>
+    <span class="s0">&quot;&quot;&quot; 
+    Projection onto the polyhedron defined by the linear inequalities 'Au &lt;= b'. 
+    &quot;&quot;&quot;</span>
+    <span class="s2">assert </span><span class="s1">A.ndim == </span><span class="s3">2</span><span class="s1">, </span><span class="s4">&quot;'A' must be a matrix (2 axes)&quot;</span>
+    <span class="s2">assert </span><span class="s1">b.ndim == </span><span class="s3">1</span><span class="s1">, </span><span class="s4">&quot;'b' must be a vector (1 axis)&quot; </span>
+    <span class="s2">assert </span><span class="s1">A.shape[</span><span class="s3">0</span><span class="s1">] == b.size, </span><span class="s4">&quot;The size of 'b' must be equal to the rows of 'A'&quot;</span>
+    <span class="s2">assert </span><span class="s1">A.shape[</span><span class="s3">1</span><span class="s1">] == u.size, </span><span class="s4">&quot;The size of 'u' must be equal to the columns of 'A'&quot;</span>
+    <span class="s2">assert </span><span class="s1">np.linalg.matrix_rank(A) == np.min(A.shape), </span><span class="s4">&quot;'A' must have full rank&quot;</span>
+    <span class="s2">if </span><span class="s1">np.all(A@u &lt;= b): </span><span class="s2">return </span><span class="s1">u</span>
+    <span class="s1">y = </span><span class="s3">0</span>
+    <span class="s1">c = np.zeros_like(b)</span>
+    <span class="s1">step = </span><span class="s3">1 </span><span class="s1">/ np.linalg.norm(A, ord=</span><span class="s3">2</span><span class="s1">)**</span><span class="s3">2</span>
+    <span class="s2">for </span><span class="s1">i </span><span class="s2">in </span><span class="s1">range(</span><span class="s3">1000</span><span class="s1">):</span>
+        <span class="s1">yo= y</span>
+        <span class="s1">g = A @ (A.T @ c - u) + b</span>
+        <span class="s1">y = np.maximum(</span><span class="s3">0</span><span class="s1">, c - step * g)</span>
+        <span class="s1">c = y + i/(i+</span><span class="s3">3</span><span class="s1">) * (y - yo)</span>
+    <span class="s1">p = u - A.T @ c</span>
+    <span class="s2">return </span><span class="s1">p</span>
+
+        
+<span class="s0">#</span>
+<span class="s0"># Use these data in your problem</span>
+<span class="s0">#</span>
+<span class="s1">np.random.seed(</span><span class="s3">0</span><span class="s1">)</span>
+<span class="s1">A1, b1, v1 = create_poly([-</span><span class="s3">2</span><span class="s1">,-</span><span class="s3">2</span><span class="s1">])</span>
+<span class="s1">A2, b2, v2 = create_poly([ </span><span class="s3">2</span><span class="s1">, </span><span class="s3">2</span><span class="s1">])</span>
+<span class="s0">#%% 
+</span><span class="s1">plot_poly(v1, v2)</span>
+<span class="s1">project_poly(np.array([</span><span class="s3">1</span><span class="s1">, </span><span class="s3">2</span><span class="s1">]), A1, b2)</span>
+<span class="s0">#%% 
+</span><span class="s2">def </span><span class="s1">cost() :</span>
+    <span class="s2">return </span><span class="s1">...</span>
+
+
+<span class="s0"># *****     grad func    *****</span>
+<span class="s0"># ****************************</span>
+<span class="s1">init = np.array([</span><span class="s3">50</span><span class="s1">])</span>
+<span class="s1">alpha=</span><span class="s3">0.00001</span>
+<span class="s1">epochs= </span><span class="s3">4000</span>
+
+<span class="s0"># *****     plot func    *****</span>
+<span class="s1">grad = gradient_descent(cost, init, alpha, epochs)</span>
+<span class="s1">print(grad[</span><span class="s3">0</span><span class="s1">])</span>
+<span class="s1">plt.plot([_ </span><span class="s2">for </span><span class="s1">_ </span><span class="s2">in </span><span class="s1">grad[</span><span class="s3">1</span><span class="s1">]])</span>
+<span class="s0">#%% md 
+</span><span class="s1">## Quiz 6 
+ 
+&gt; **Largest inscribed circle.**  Consider a polyhedron described by the set of linear inequalities ${\bf a}_m^\top {\bf x} \le b_m$ with $m=1,\dots,M$. Find the center and the radius of the largest circle that can be inscribed inside the polyhedron. 
+ 
+![inscribed_circle.png](attachment:inscribed_circle.png) 
+ 
+*Hint:* Consider a convex set defined by the intersection of convex inequalities $f_1({\bf x})\le 0, \dots, f_M({\bf x})\le 0$. The  largest inscribed circle can be found by solving the following problem 
+ 
+$$ 
+\operatorname*{maximize}_{{\bf c},\; r\ge0} \quad r 
+\quad{\rm s.t.}\quad 
+\begin{cases} 
+\displaystyle\max_{\|{\bf u}\|\le 1} f_1({\bf c} + r {\bf u}) \le 0\\ 
+\dots\\ 
+\displaystyle\max_{\|{\bf u}\|\le 1} f_M({\bf c} + r {\bf u}) \le 0. 
+\end{cases} 
+$$ 
+ 
+When the function $f_i$ is affine, the supremum can be written in closed form. Useful functios: `project_poly` (see above), `np.r_`, `np.c_`. 
+</span><span class="s0">#%% 
+</span><span class="s2">def </span><span class="s1">plot_circle(vertexes, center=</span><span class="s2">None</span><span class="s1">, radius=</span><span class="s2">None</span><span class="s1">):</span>
+    <span class="s0">&quot;&quot;&quot; 
+    Display a polygon given their vertexes, and a circle (if given). 
+    &quot;&quot;&quot;</span>
+    <span class="s1">plt.fill(vertexes[:,</span><span class="s3">0</span><span class="s1">], vertexes[:,</span><span class="s3">1</span><span class="s1">], fc=</span><span class="s4">'w'</span><span class="s1">, ec=</span><span class="s4">'k'</span><span class="s1">)</span>
+    <span class="s1">plt.fill(vertexes[:,</span><span class="s3">0</span><span class="s1">], vertexes[:,</span><span class="s3">1</span><span class="s1">], fc=</span><span class="s4">'gray'</span><span class="s1">, alpha=</span><span class="s3">0.2</span><span class="s1">)</span>
+    <span class="s1">plt.axis(</span><span class="s4">'off'</span><span class="s1">)</span>
+    <span class="s1">plt.axis(</span><span class="s4">'equal'</span><span class="s1">)</span>
+    <span class="s2">if </span><span class="s1">center </span><span class="s2">is not None</span><span class="s1">:</span>
+        <span class="s1">plt.plot(*center, </span><span class="s4">'X'</span><span class="s1">, ms=</span><span class="s3">12</span><span class="s1">, mec=</span><span class="s4">'w'</span><span class="s1">)</span>
+        <span class="s1">angle = np.linspace(</span><span class="s3">0 </span><span class="s1">, </span><span class="s3">2 </span><span class="s1">* np.pi) </span>
+        <span class="s1">x = center[</span><span class="s3">0</span><span class="s1">] + radius * np.cos(angle) </span>
+        <span class="s1">y = center[</span><span class="s3">1</span><span class="s1">] + radius * np.sin(angle)</span>
+        <span class="s1">plt.plot(x, y, </span><span class="s4">'--'</span><span class="s1">, c=</span><span class="s4">'tab:red'</span><span class="s1">, lw=</span><span class="s3">2</span><span class="s1">)</span>
+
+<span class="s0">#</span>
+<span class="s0"># Use these data in your problem</span>
+<span class="s0">#</span>
+
+<span class="s1">np.random.seed(</span><span class="s3">24</span><span class="s1">)</span>
+
+<span class="s1">a, b, v = create_poly([</span><span class="s3">0</span><span class="s1">,</span><span class="s3">0</span><span class="s1">])</span>
+<span class="s0">#%% md 
+</span><span class="s1">## Quiz 7 
+ 
+&gt; **Shortest path.** A car must drive on a track, whose limits are specified by a series of left points ${\bf a}_1,\dots,{\bf a}_P$ and right points ${\bf b}_1,\dots,{\bf b}_P$. What is the shortest path within the track from a given initial position ${\bf x}_1$ to a given final position ${\bf x}_P$?  
+ 
+![track.png](attachment:track.png) 
+ 
+*Hints:* 
+- A path is a series of points ${\bf x}_1, {\bf x}_2, \dots, {\bf x}_P$. 
+- For the path to stay on track, each point ${\bf x}_i$ must lie on the segment joining the respective limits ${\bf a}_i$ and ${\bf b}_i$. 
+- A point of a segment can be represented by a cofficient $\alpha_i\in[0,1]$ such that ${\bf x}_i(\alpha_i) = \alpha_i {\bf a}_i + (1-\alpha_i) {\bf b}_i$. 
+- Remember that the initial point ${\bf x}_1$ and the final point ${\bf x}_P$ are given, and cannot be changed whatsoever. 
+- Useful functions: `np.clip`. 
+</span><span class="s0">#%% 
+</span><span class="s2">def </span><span class="s1">plot_track(left, right, path=</span><span class="s2">None</span><span class="s1">):</span>
+    <span class="s0">&quot;&quot;&quot; 
+    Display the track and a path (if given) 
+    &quot;&quot;&quot;</span>
+    <span class="s1">pts = np.vstack((right, left[[-</span><span class="s3">1</span><span class="s1">]], left[::-</span><span class="s3">1</span><span class="s1">], right[[</span><span class="s3">0</span><span class="s1">]]))</span>
+    <span class="s1">plt.fill(pts[:,</span><span class="s3">0</span><span class="s1">], pts[:,</span><span class="s3">1</span><span class="s1">], alpha=</span><span class="s3">0.3</span><span class="s1">)</span>
+    <span class="s1">plt.plot(left[:,</span><span class="s3">0</span><span class="s1">], left[:,</span><span class="s3">1</span><span class="s1">], </span><span class="s4">'k'</span><span class="s1">, right[:,</span><span class="s3">0</span><span class="s1">], right[:,</span><span class="s3">1</span><span class="s1">], </span><span class="s4">'k'</span><span class="s1">, alpha=</span><span class="s3">0.2</span><span class="s1">)</span>
+    <span class="s1">plt.axis(</span><span class="s4">'off'</span><span class="s1">)</span>
+    <span class="s1">plt.axis(</span><span class="s4">'equal'</span><span class="s1">)</span>
+    <span class="s2">if </span><span class="s1">path </span><span class="s2">is None</span><span class="s1">:</span>
+        <span class="s1">n = </span><span class="s3">4</span>
+        <span class="s1">plt.plot(np.stack((left[:n,</span><span class="s3">0</span><span class="s1">], right[:n,</span><span class="s3">0</span><span class="s1">])), np.stack((left[:n,</span><span class="s3">1</span><span class="s1">], right[:n,</span><span class="s3">1</span><span class="s1">])), </span><span class="s4">'.'</span><span class="s1">, alpha=</span><span class="s3">0.6</span><span class="s1">)</span>
+        <span class="s2">for </span><span class="s1">i </span><span class="s2">in </span><span class="s1">range(n):</span>
+            <span class="s1">plt.text(left[i,</span><span class="s3">0</span><span class="s1">], left[i,</span><span class="s3">1</span><span class="s1">]-</span><span class="s3">0.05</span><span class="s1">, </span><span class="s4">r'${\bf a}_{'</span><span class="s1">+str(i+</span><span class="s3">1</span><span class="s1">)+</span><span class="s4">'}$'</span><span class="s1">, ha=</span><span class="s4">'center'</span><span class="s1">, va=</span><span class="s4">'top'</span><span class="s1">, size=</span><span class="s3">14</span><span class="s1">)</span>
+            <span class="s1">plt.text(right[i,</span><span class="s3">0</span><span class="s1">], right[i,</span><span class="s3">1</span><span class="s1">], </span><span class="s4">r'${\bf b}_{'</span><span class="s1">+str(i+</span><span class="s3">1</span><span class="s1">)+</span><span class="s4">'}$'</span><span class="s1">, ha=</span><span class="s4">'left'</span><span class="s1">, va=</span><span class="s4">'bottom'</span><span class="s1">, size=</span><span class="s3">14</span><span class="s1">)</span>
+    <span class="s2">else</span><span class="s1">:</span>
+        <span class="s1">plt.plot(path[:,</span><span class="s3">0</span><span class="s1">], path[:,</span><span class="s3">1</span><span class="s1">], </span><span class="s4">'k--'</span><span class="s1">)</span>
+        
+        
+<span class="s0">#</span>
+<span class="s0"># Use these data in your problem</span>
+<span class="s0">#</span>
+        
+<span class="s1">left = np.array([[ </span><span class="s3">2.51026995</span><span class="s1">,  </span><span class="s3">0.62392034</span><span class="s1">], [ </span><span class="s3">2.13745033</span><span class="s1">,  </span><span class="s3">0.7059665 </span><span class="s1">],</span>
+                 <span class="s1">[ </span><span class="s3">1.75503451</span><span class="s1">,  </span><span class="s3">0.77617819</span><span class="s1">], [ </span><span class="s3">1.36453172</span><span class="s1">,  </span><span class="s3">0.83427833</span><span class="s1">],</span>
+                 <span class="s1">[ </span><span class="s3">0.9674831 </span><span class="s1">,  </span><span class="s3">0.88003761</span><span class="s1">], [ </span><span class="s3">0.56545561</span><span class="s1">,  </span><span class="s3">0.91327545</span><span class="s1">],</span>
+                 <span class="s1">[ </span><span class="s3">0.16003586</span><span class="s1">,  </span><span class="s3">0.93386067</span><span class="s1">], [-</span><span class="s3">0.24717612</span><span class="s1">,  </span><span class="s3">0.94171203</span><span class="s1">],</span>
+                 <span class="s1">[-</span><span class="s3">0.39185156</span><span class="s1">,  </span><span class="s3">0.93591117</span><span class="s1">], [-</span><span class="s3">0.44247203</span><span class="s1">,  </span><span class="s3">0.92081451</span><span class="s1">],</span>
+                 <span class="s1">[-</span><span class="s3">0.48125897</span><span class="s1">,  </span><span class="s3">0.89865695</span><span class="s1">], [-</span><span class="s3">0.50441564</span><span class="s1">,  </span><span class="s3">0.87160744</span><span class="s1">],</span>
+                 <span class="s1">[-</span><span class="s3">0.5096753 </span><span class="s1">,  </span><span class="s3">0.84231377</span><span class="s1">], [-</span><span class="s3">0.49652311</span><span class="s1">,  </span><span class="s3">0.8136434 </span><span class="s1">],</span>
+                 <span class="s1">[-</span><span class="s3">0.46624648</span><span class="s1">,  </span><span class="s3">0.7884028 </span><span class="s1">], [-</span><span class="s3">0.42180911</span><span class="s1">,  </span><span class="s3">0.76906269</span><span class="s1">],</span>
+                 <span class="s1">[-</span><span class="s3">0.36756084</span><span class="s1">,  </span><span class="s3">0.75751621</span><span class="s1">], [-</span><span class="s3">0.30881187</span><span class="s1">,  </span><span class="s3">0.75489361</span><span class="s1">],</span>
+                 <span class="s1">[ </span><span class="s3">0.15082497</span><span class="s1">,  </span><span class="s3">0.72293589</span><span class="s1">], [ </span><span class="s3">0.69702381</span><span class="s1">,  </span><span class="s3">0.6008423 </span><span class="s1">],</span>
+                 <span class="s1">[ </span><span class="s3">1.14082362</span><span class="s1">,  </span><span class="s3">0.40056421</span><span class="s1">], [ </span><span class="s3">1.43878217</span><span class="s1">,  </span><span class="s3">0.14170625</span><span class="s1">],</span>
+                 <span class="s1">[ </span><span class="s3">1.56173321</span><span class="s1">, -</span><span class="s3">0.15039278</span><span class="s1">], [ </span><span class="s3">1.49764143</span><span class="s1">, -</span><span class="s3">0.44714018</span><span class="s1">],</span>
+                 <span class="s1">[ </span><span class="s3">1.25278058</span><span class="s1">, -</span><span class="s3">0.71948824</span><span class="s1">], [ </span><span class="s3">0.85111935</span><span class="s1">, -</span><span class="s3">0.94077765</span><span class="s1">],</span>
+                 <span class="s1">[ </span><span class="s3">0.33197514</span><span class="s1">, -</span><span class="s3">1.08934705</span><span class="s1">], [-</span><span class="s3">0.2538346 </span><span class="s1">, -</span><span class="s3">1.15065344</span><span class="s1">],</span>
+                 <span class="s1">[-</span><span class="s3">0.44682883</span><span class="s1">, -</span><span class="s3">1.15721144</span><span class="s1">], [-</span><span class="s3">0.4974493 </span><span class="s1">, -</span><span class="s3">1.17230811</span><span class="s1">],</span>
+                 <span class="s1">[-</span><span class="s3">0.53623623</span><span class="s1">, -</span><span class="s3">1.19446566</span><span class="s1">], [-</span><span class="s3">0.5593929 </span><span class="s1">, -</span><span class="s3">1.22151518</span><span class="s1">],</span>
+                 <span class="s1">[-</span><span class="s3">0.56465257</span><span class="s1">, -</span><span class="s3">1.25080885</span><span class="s1">], [-</span><span class="s3">0.55150037</span><span class="s1">, -</span><span class="s3">1.27947921</span><span class="s1">],</span>
+                 <span class="s1">[-</span><span class="s3">0.52122374</span><span class="s1">, -</span><span class="s3">1.30471981</span><span class="s1">], [-</span><span class="s3">0.47678638</span><span class="s1">, -</span><span class="s3">1.32405993</span><span class="s1">],</span>
+                 <span class="s1">[-</span><span class="s3">0.4225381 </span><span class="s1">, -</span><span class="s3">1.33560641</span><span class="s1">], [-</span><span class="s3">0.36378913</span><span class="s1">, -</span><span class="s3">1.338229  </span><span class="s1">],</span>
+                 <span class="s1">[-</span><span class="s3">0.31378913</span><span class="s1">, -</span><span class="s3">1.338229  </span><span class="s1">], [-</span><span class="s3">0.26378913</span><span class="s1">, -</span><span class="s3">1.338229  </span><span class="s1">]])</span>
+
+<span class="s1">right = np.array([[ </span><span class="s3">2.96175411</span><span class="s1">,  </span><span class="s3">1.08344949</span><span class="s1">], [ </span><span class="s3">2.53017623</span><span class="s1">,  </span><span class="s3">1.17872435</span><span class="s1">],</span>
+                  <span class="s1">[ </span><span class="s3">2.08745225</span><span class="s1">,  </span><span class="s3">1.26029897</span><span class="s1">], [ </span><span class="s3">1.63532939</span><span class="s1">,  </span><span class="s3">1.32785143</span><span class="s1">],</span>
+                  <span class="s1">[ </span><span class="s3">1.17559198</span><span class="s1">,  </span><span class="s3">1.38111514</span><span class="s1">], [ </span><span class="s3">0.7100544 </span><span class="s1">,  </span><span class="s3">1.41987987</span><span class="s1">],</span>
+                  <span class="s1">[ </span><span class="s3">0.2405539 </span><span class="s1">,  </span><span class="s3">1.44399264</span><span class="s1">], [-</span><span class="s3">0.2310566 </span><span class="s1">,  </span><span class="s3">1.4533583 </span><span class="s1">],</span>
+                  <span class="s1">[-</span><span class="s3">0.63142305</span><span class="s1">,  </span><span class="s3">1.433482  </span><span class="s1">], [-</span><span class="s3">0.97868213</span><span class="s1">,  </span><span class="s3">1.3571185 </span><span class="s1">],</span>
+                  <span class="s1">[-</span><span class="s3">1.26161969</span><span class="s1">,  </span><span class="s3">1.23098563</span><span class="s1">], [-</span><span class="s3">1.45253983</span><span class="s1">,  </span><span class="s3">1.06743015</span><span class="s1">],</span>
+                  <span class="s1">[-</span><span class="s3">1.53275397</span><span class="s1">,  </span><span class="s3">0.88246203</span><span class="s1">], [-</span><span class="s3">1.49441018</span><span class="s1">,  </span><span class="s3">0.69418722</span><span class="s1">],</span>
+                  <span class="s1">[-</span><span class="s3">1.34126183</span><span class="s1">,  </span><span class="s3">0.52103537</span><span class="s1">], [-</span><span class="s3">1.08830013</span><span class="s1">,  </span><span class="s3">0.3799558 </span><span class="s1">],</span>
+                  <span class="s1">[-</span><span class="s3">0.76028674</span><span class="s1">,  </span><span class="s3">0.28475836</span><span class="s1">], [-</span><span class="s3">0.3893299 </span><span class="s1">,  </span><span class="s3">0.24476164</span><span class="s1">],</span>
+                  <span class="s1">[-</span><span class="s3">0.08874652</span><span class="s1">,  </span><span class="s3">0.22536506</span><span class="s1">], [ </span><span class="s3">0.16081372</span><span class="s1">,  </span><span class="s3">0.16453831</span><span class="s1">],</span>
+                  <span class="s1">[ </span><span class="s3">0.36046291</span><span class="s1">,  </span><span class="s3">0.06823554</span><span class="s1">], [ </span><span class="s3">0.49065798</span><span class="s1">, -</span><span class="s3">0.05411647</span><span class="s1">],</span>
+                  <span class="s1">[ </span><span class="s3">0.53865454</span><span class="s1">, -</span><span class="s3">0.19054104</span><span class="s1">], [ </span><span class="s3">0.49975436</span><span class="s1">, -</span><span class="s3">0.32768399</span><span class="s1">],</span>
+                  <span class="s1">[ </span><span class="s3">0.37776524</span><span class="s1">, -</span><span class="s3">0.45212081</span><span class="s1">], [ </span><span class="s3">0.18462834</span><span class="s1">, -</span><span class="s3">0.55167077</span><span class="s1">],</span>
+                  <span class="s1">[-</span><span class="s3">0.06075076</span><span class="s1">, -</span><span class="s3">0.61658921</span><span class="s1">], [-</span><span class="s3">0.33435264</span><span class="s1">, -</span><span class="s3">0.64052146</span><span class="s1">],</span>
+                  <span class="s1">[-</span><span class="s3">0.68640032</span><span class="s1">, -</span><span class="s3">0.65964061</span><span class="s1">], [-</span><span class="s3">1.03365939</span><span class="s1">, -</span><span class="s3">0.73600412</span><span class="s1">],</span>
+                  <span class="s1">[-</span><span class="s3">1.31659695</span><span class="s1">, -</span><span class="s3">0.86213699</span><span class="s1">], [-</span><span class="s3">1.50751709</span><span class="s1">, -</span><span class="s3">1.02569246</span><span class="s1">],</span>
+                  <span class="s1">[-</span><span class="s3">1.58773123</span><span class="s1">, -</span><span class="s3">1.21066059</span><span class="s1">], [-</span><span class="s3">1.54938744</span><span class="s1">, -</span><span class="s3">1.3989354 </span><span class="s1">],</span>
+                  <span class="s1">[-</span><span class="s3">1.39623909</span><span class="s1">, -</span><span class="s3">1.57208724</span><span class="s1">], [-</span><span class="s3">1.14327739</span><span class="s1">, -</span><span class="s3">1.71316681</span><span class="s1">],</span>
+                  <span class="s1">[-</span><span class="s3">0.815264  </span><span class="s1">, -</span><span class="s3">1.80836425</span><span class="s1">], [-</span><span class="s3">0.44430717</span><span class="s1">, -</span><span class="s3">1.84836098</span><span class="s1">],</span>
+                  <span class="s1">[-</span><span class="s3">0.40430717</span><span class="s1">, -</span><span class="s3">1.84836098</span><span class="s1">], [-</span><span class="s3">0.30430717</span><span class="s1">, -</span><span class="s3">1.84836098</span><span class="s1">]])</span>
+
+<span class="s1">start = (left[</span><span class="s3">0</span><span class="s1">] + right[</span><span class="s3">0</span><span class="s1">]) / </span><span class="s3">2</span>
+<span class="s1">finish = (left[-</span><span class="s3">1</span><span class="s1">] + right[-</span><span class="s3">1</span><span class="s1">]) / </span><span class="s3">2</span>
+<span class="s0">#%% md 
+</span><span class="s1">## Quiz 8 
+ 
+Knowing where you are is a fundamental requirement for every navigator. If you don't know where you are, you can find yourself on a map with a compass. To assist you in this task, modern maps show the position of many recognizable aids to navigation, such as landmarks and buildings. A compass (or a sextant at sea) allows you to measure your distance to known locations by [triangulation](https://en.wikipedia.org/wiki/Triangulation_(surveying)) or even with [bare hands](http://artofwayfinding.blogspot.com/2014/07/position-finding-and-lines-of-position_23.html). Based on these distances, you can identify your position with a technique called [trilateration](https://en.wikipedia.org/wiki/True_range_multilateration), whose accuracy depends on the precision of measured distances. As a rule of thumb, more distance between two known locations enhances accuracy, whereas less distance between you and the closest known location also enhances accuracy. 
+ 
+&lt;!-- ![](../images/navigation_ranges.png) --&gt; 
+ 
+![navigation_ranges.png](attachment:navigation_ranges.png) 
+</span><span class="s0">#%% md 
+</span><span class="s1">&gt; **Problem.** You are given the *exact* positions ${\bf p}_1, \dots, {\bf p}_M \in \mathbb{R}^2$ of some landmarks, along with their *inaccurate* distances $d_1, \dots, d_M \in \mathbb{R}$ to your *unknown* location ${\bf w} \in \mathbb{R}^2$. Find your approximate location based on the landmark positions and distances. 
+ 
+*Hint:* Think of a way to relate your location to the landmarks and their distances. 
+ 
+![trilateration.png](attachment:trilateration.png) 
+</span><span class="s0">#%% 
+</span><span class="s2">def </span><span class="s1">plot_position(landmarks, position=</span><span class="s2">None</span><span class="s1">):</span>
+    <span class="s0">&quot;&quot;&quot; 
+    Display the landmarks and mark a position (if given) 
+    &quot;&quot;&quot;</span>
+    <span class="s1">plt.plot(landmarks[:,</span><span class="s3">0</span><span class="s1">], landmarks[:,</span><span class="s3">1</span><span class="s1">], </span><span class="s4">'o'</span><span class="s1">, ms=</span><span class="s3">10</span><span class="s1">, mec=</span><span class="s4">'k'</span><span class="s1">, zorder=</span><span class="s3">3</span><span class="s1">, label=</span><span class="s4">'Landmarks'</span><span class="s1">)</span>
+    <span class="s2">if </span><span class="s1">position </span><span class="s2">is not None</span><span class="s1">:</span>
+        <span class="s1">plt.plot(*position, </span><span class="s4">'r*'</span><span class="s1">, ms=</span><span class="s3">25</span><span class="s1">, mec=</span><span class="s4">'k'</span><span class="s1">, zorder=</span><span class="s3">3</span><span class="s1">, label=</span><span class="s4">'Position'</span><span class="s1">)</span>
+        <span class="s1">plt.plot([landmarks[:,</span><span class="s3">0</span><span class="s1">], position[</span><span class="s3">0</span><span class="s1">]*np.ones(landmarks.shape[</span><span class="s3">0</span><span class="s1">])],</span>
+                 <span class="s1">[landmarks[:,</span><span class="s3">1</span><span class="s1">], position[</span><span class="s3">1</span><span class="s1">]*np.ones(landmarks.shape[</span><span class="s3">0</span><span class="s1">])], </span><span class="s4">'--k'</span><span class="s1">, lw=</span><span class="s3">1</span><span class="s1">)</span>
+    <span class="s1">plt.axis(</span><span class="s4">'off'</span><span class="s1">)</span>
+    <span class="s1">plt.axis(</span><span class="s4">'equal'</span><span class="s1">)</span>
+    <span class="s1">plt.legend(fontsize=</span><span class="s3">14</span><span class="s1">)</span>
+    
+<span class="s0">#</span>
+<span class="s0"># Use these data in your problem</span>
+<span class="s0">#</span>
+
+<span class="s0"># Landmark positions</span>
+<span class="s1">landmarks = np.array([[</span><span class="s3">1.5</span><span class="s1">, </span><span class="s3">1.5</span><span class="s1">],</span>
+                      <span class="s1">[</span><span class="s3">1.5</span><span class="s1">, </span><span class="s3">2.0</span><span class="s1">],</span>
+                      <span class="s1">[</span><span class="s3">1.9</span><span class="s1">, </span><span class="s3">2.5</span><span class="s1">],</span>
+                      <span class="s1">[</span><span class="s3">2.0</span><span class="s1">, </span><span class="s3">1.7</span><span class="s1">],</span>
+                      <span class="s1">[</span><span class="s3">2.5</span><span class="s1">, </span><span class="s3">1.5</span><span class="s1">],</span>
+                      <span class="s1">[</span><span class="s3">2.4</span><span class="s1">, </span><span class="s3">2.2</span><span class="s1">]])</span>
+
+<span class="s0"># Inaccurate distances between each landmark and your location</span>
+<span class="s1">distances = [</span><span class="s3">0.86092014</span><span class="s1">, </span><span class="s3">0.33290227</span><span class="s1">, </span><span class="s3">0.44576547</span><span class="s1">, </span><span class="s3">0.84312245</span><span class="s1">, </span><span class="s3">0.94311882</span><span class="s1">, </span><span class="s3">0.55317261</span><span class="s1">]</span>
+<span class="s0">#%% md 
+</span><span class="s1">## Quiz 9 
+ 
+[Resection](https://en.wikipedia.org/wiki/Position_resection) is a triangulation method for finding your position on a map by measuring angles with respect to known positions. It can be considered as a simpler and less accurate alternative to trilateration. The most important concept in resecting is something called a *line of position*. This is a line on the map that passes through your position. You may not know precisely where along that line you are located, but you know you're on that line, or at least not far from it. To create a line of position, you take out a compass, and take a bearing to a visible landmark; then, you use the bearing to draw on a map the line of position extending from that lankmard. If you take bearings to different objects, you can plot two or more lines of position, and deduce your position from their intersection. However, there is always some uncertainty in taking compass bearings: the precision of a hand-held backpacker's compass is probably $\pm5$ degrees. It follows that the lines of position are only able to delimit the area where your position is located, as shown in the figure below. A possible way to pin down your approximate position is to compute the center of the area enclosed by the lines of position. 
+ 
+| Resection | Lines of position | 
+|:-:|:-:| 
+| ![Resection.jpg](attachment:Resection.jpg) | ![position-fix.png](attachment:position-fix.png) | 
+</span><span class="s0">#%% md 
+</span><span class="s1">&gt; **Problem.** You are given the slope ${\bf a}_m\in\mathbb{R}^2$ and the intercept $b_m\in\mathbb{R}$ of multiple lines, with $m=1,\dots,M$. The associated set of linear inequalities delimits a closed area taking the form of a polyhedron such as 
+&gt; 
+&gt; $$ 
+A{\bf w} \le {\bf b} 
+\quad\iff\quad 
+\begin{cases} 
+{\bf a}_1^\top {\bf w} \le b_1\\ 
+\;\vdots\\ 
+{\bf a}_M^\top {\bf w} \le b_M. 
+\end{cases} 
+$$ 
+&gt; 
+&gt;Find the point ${\bf p} \in\mathbb{R}^2$ that is located roughly in the center of this area. 
+ 
+![resection.png](attachment:resection.png) 
+ 
+*Grading:* This problem can be solved in several ways. You are encouraged to propose multiple formulations to get more points. 
+ - You get **0.5 point** if you propose and solve **1 formulation**. 
+ - You get **1 points** if you propose and solve **2 formulations**. 
+ - You get **2 points** if you propose and solve **3 formulations**. 
+ - You get **3 points** if you propose and solve **4 formulations**. 
+ - You get **4 points** if you propose and solve **5 formulations**. 
+</span><span class="s0">#%% 
+</span><span class="s2">def </span><span class="s1">plot_area(vertexes, *args):</span>
+    <span class="s0">&quot;&quot;&quot; 
+    Dysplay a polygon given its vertexes, and mark one or several points (if given) 
+    &quot;&quot;&quot;</span>
+    <span class="s1">plt.fill(vertexes[:,</span><span class="s3">0</span><span class="s1">], vertexes[:,</span><span class="s3">1</span><span class="s1">], fc=</span><span class="s4">'w'</span><span class="s1">, ec=</span><span class="s4">'k'</span><span class="s1">, lw=</span><span class="s3">2</span><span class="s1">)</span>
+    <span class="s1">plt.fill(vertexes[:,</span><span class="s3">0</span><span class="s1">], vertexes[:,</span><span class="s3">1</span><span class="s1">], fc=</span><span class="s4">'gray'</span><span class="s1">, alpha=</span><span class="s3">0.2</span><span class="s1">)</span>
+    <span class="s1">plt.axis(</span><span class="s4">'equal'</span><span class="s1">)</span>
+    <span class="s1">plt.axis(</span><span class="s4">'off'</span><span class="s1">)</span>
+    <span class="s2">for </span><span class="s1">center </span><span class="s2">in </span><span class="s1">args:</span>
+        <span class="s1">plt.plot(*center, </span><span class="s4">'X'</span><span class="s1">, ms=</span><span class="s3">12</span><span class="s1">, mec=</span><span class="s4">'w'</span><span class="s1">)</span>
+
+<span class="s0">#</span>
+<span class="s0"># Use these data in your problem</span>
+<span class="s0">#</span>
+<span class="s1">np.random.seed(</span><span class="s3">10</span><span class="s1">)</span>
+<span class="s1">slopes, intercepts, vertexes = create_poly()</span>
+<span class="s0">#%% md 
+</span><span class="s1">## Quiz 10 
+ 
+&gt; **Optimal trajectory.** A hovercraft is required to pass by a set of given waypoints at some prescribed times, while minimizing the fuel usage. 
+&gt; 
+&gt;- The time is discretized: $t = 0, 1,\dots, T$. 
+&gt;  
+&gt; 
+&gt;- At each timestep, the hovercraft is defined by the following variables.  
+&gt;   - ${\bf x}_t \in \mathbb{R}^2$ - position 
+&gt;   - ${\bf v}_t \in \mathbb{R}^2$ - velocity 
+&gt;   - ${\bf u}_t \in \mathbb{R}^2$ - thrust 
+&gt; 
+&gt; 
+&gt;- Several waypoints are given, each associated to a prescribed time. 
+&gt;   - ${\bf p}_1, \dots, {\bf p}_K \in \mathbb{R}^2$ - waypoints 
+&gt;   - $t_1, \dots, t_K \in [0, T]$ - prescribed times 
+&gt; 
+&gt; 
+&gt;- The goal is to choose the optimal thruster inputs ${\bf u}_0, \dots, {\bf u}_{T-1}$ based on two criteria. 
+&gt;   - The fuel usage is to be minimized by limiting thrust, namely the square norm of each ${\bf u}_t$. 
+&gt;   - At a given time $t_k$, the square distance between the hovercraft position ${\bf x}_{t_k}$ and the corresponding waypoint ${\bf p}_k$ must be small. 
+&gt;   - Multiply the second term by a small constant $\gamma&gt;0$ to control how close the hovercraft must pass by the waypoints. 
+&gt; 
+&gt; 
+&gt;- The hovercraft dynamics are modelized as follows. 
+&gt; 
+&gt; $$\begin{cases} 
+{\bf x}_0 &amp;= 0 \\ 
+{\bf v}_0 &amp;= 0 \\ 
+{\bf v}_{t+1} &amp;= {\bf v}_t + {\bf u}_t &amp;\quad\textrm{for $\,t=0, 1,\dots, T-1$}\\ 
+{\bf x}_{t+1} &amp;= {\bf x}_t + {\bf v}_t &amp;\quad\textrm{for $\,t=0, 1,\dots, T-1$}  
+\end{cases}$$ 
+&gt; 
+&gt;- For the waypoints and times given below, the optimal solution of the hoverclaft trajectory should look like the figure below. 
+ 
+ 
+![trajectory.png](attachment:trajectory.png) 
+</span><span class="s0">#%% md 
+</span><span class="s1">### Question 1. Forward shooting 
+ 
+Formulate the optimization problem with respect to the thrusts ${\bf u}_0, \dots, {\bf u}_{T-1}$. Roll out the equations of the hovercraft dynamics, so that you can compute the velocity ${\bf v}_{t+1}$ in terms of the thrusts ${\bf u}_0,\dots,{\bf u}_t$, and the position ${\bf x}_{t+1}$ in terms of the velocities ${\bf v}_0,\dots,{\bf v}_t$. In this regard, you will find useful the function [`np.cumsum()`](https://docs.scipy.org/doc/numpy/reference/generated/numpy.cumsum.html). You will end up with an unconstrained optimization problem such as 
+ 
+$$ 
+\operatorname*{minimize}_{{\bf u}_0,\dots,{\bf u}_{T-1}} \quad J({\bf u}_0,\dots,{\bf u}_{T-1}). 
+$$ 
+ 
+&gt; *Hint:* Store the variables in a matrix of size $T\times 2$, where each row is a vector ${\bf u}_t$ of length 2. 
+&gt; 
+&gt; $$ 
+\begin{bmatrix} 
+{\bf u}_0^\top \\ 
+{\bf u}_1^\top \\ 
+\vdots \\ 
+{\bf u}_{T-1}^\top 
+\end{bmatrix}  
+\in \mathbb{R}^{T\times2} 
+$$ 
+&gt; 
+&gt; After solving the optimization problem, use the optimal thrusters ${\bf u}_0^*, {\bf u}_1^*, \dots, {\bf u}_{T-1}^*$ to derive the optimal positions ${\bf x}_0^*, {\bf x}_1^*, \dots, {\bf x}_{T-1}^*$. Then, plot the positions to display the hovercraft trajectory. 
+</span><span class="s0">#%% md 
+</span><span class="s1">### Question 2. Direct collocation 
+ 
+Formulate the optimization problem with respect to the thrusts ${\bf u}_0, \dots, {\bf u}_{T-1}$, the velocities ${\bf v}_1, \dots, {\bf v}_{T}$, and the positions ${\bf x}_1, \dots, {\bf x}_{T}$. Use the equations of the hovercraft dynamics to constrain the variables. You will end up with a constrained optimization problem such as 
+ 
+$$ 
+\operatorname*{minimize}_{ 
+\begin{smallmatrix} 
+{\bf u}_0,\dots,{\bf u}_{T-1} 
+\\ 
+{\bf v}_1, \dots, {\bf v}_{T} 
+\\ 
+{\bf x}_1, \dots, {\bf x}_{T} 
+\end{smallmatrix} 
+}  
+\quad F({\bf u}_0,\dots,{\bf u}_{T-1}, {\bf x}_1, \dots, {\bf x}_{T}) 
+\quad{\rm s.t.}\quad 
+\begin{cases} 
+{\bf v}_{t+1} = {\bf v}_t + {\bf u}_t &amp;\quad {\small t=0, 1,\dots, T-1}\\ 
+{\bf x}_{t+1} = {\bf x}_t + {\bf v}_t &amp;\quad {\small t=0, 1,\dots, T-1}. 
+\end{cases} 
+$$ 
+ 
+&gt; *Hint:* Concatenate the variables in a matrix of size $3T\times2$: 
+&gt; 
+&gt; $$ 
+\begin{bmatrix} 
+{\bf u}_0^\top \\ 
+\vdots \\ 
+{\bf u}_{T-1}^\top \\[0.5em] 
+{\bf v}_1^\top \\ 
+\vdots \\ 
+{\bf v}_T^\top \\[0.5em] 
+{\bf x}_1^\top \\  
+\vdots \\ 
+{\bf x}_T ^\top 
+\end{bmatrix} \in \mathbb{R}^{3T\times 2}. 
+$$ 
+&gt; 
+&gt; The constraints can be written as a system of linear equations. The following is an example with $T=3$. 
+&gt; 
+&gt; $$ 
+\left\{ 
+\begin{array}{ccccccc} 
+{\bf u}_0 &amp; &amp; &amp; - &amp; {\bf v}_1 &amp; = &amp; {\bf 0} 
+\\ 
+{\bf u}_1 &amp; + &amp; {\bf v}_1 &amp; - &amp; {\bf v}_2 &amp; = &amp; {\bf 0} 
+\\ 
+{\bf u}_2 &amp; + &amp; {\bf v}_2 &amp; - &amp; {\bf v}_3 &amp; = &amp; {\bf 0} 
+\\ 
+&amp; &amp; &amp;  &amp; {\bf x}_1 &amp; = &amp; {\bf 0} 
+\\ 
+{\bf v}_1 &amp; + &amp; {\bf x}_1 &amp; - &amp; {\bf x}_2 &amp; = &amp; {\bf 0} 
+\\ 
+{\bf v}_2 &amp; + &amp; {\bf x}_2 &amp; - &amp; {\bf x}_3 &amp; = &amp; {\bf 0} 
+\end{array} 
+\right. 
+$$ 
+&gt; 
+&gt; The equivalent matrix form is the following. 
+&gt; $$ 
+\underbrace{ 
+\begin{bmatrix} 
+1 &amp; 0 &amp; 0 \quad| &amp; -1 &amp; 0 &amp; 0 \quad| &amp; 0 &amp; 0 &amp; 0 
+\\ 
+0 &amp; 1 &amp;  0 \quad| &amp; 1 &amp; -1 &amp; 0 \quad| &amp; 0 &amp; 0 &amp; 0 
+\\ 
+0 &amp; 0 &amp; 1 \quad| &amp; 0 &amp; 1 &amp; -1 \;\;| &amp; 0 &amp; 0 &amp; 0 
+\\[0.5em] 
+0 &amp; 0 &amp; 0 \quad| &amp; 0 &amp; 0 &amp; 0 \quad| &amp; -1 &amp; 0 &amp; 0  
+\\ 
+0 &amp; 0 &amp; 0 \quad| &amp; 1 &amp; 0 &amp; 0 \quad| &amp; 1 &amp; -1 &amp; 0  
+\\ 
+0 &amp; 0 &amp; 0 \quad| &amp; 0 &amp; 1 &amp; 0 \quad| &amp; 0 &amp; 1 &amp; -1  
+\end{bmatrix} 
+}_{A} 
+\, 
+\begin{bmatrix} 
+{\bf u}_0^\top \\ 
+{\bf u}_1^\top \\ 
+{\bf u}_2^\top \\[0.5em] 
+{\bf v}_1^\top \\ 
+{\bf v}_2^\top \\ 
+{\bf v}_3^\top \\[0.5em] 
+{\bf x}_1^\top \\  
+{\bf x}_2^\top \\ 
+{\bf x}_3 ^\top 
+\end{bmatrix} 
+=  
+\underbrace{ 
+\begin{bmatrix} 
+{\bf 0}^\top \\ {\bf 0}^\top \\ {\bf 0}^\top 
+\\[0.5em] 
+{\bf 0}^\top \\ {\bf 0}^\top \\ {\bf 0}^\top 
+\end{bmatrix} 
+}_{B} 
+$$ 
+&gt; 
+&gt; Once you understand the logic, you should be able to generalize it to any size $T$. Build the matrices $A$ and $B$, then use the function `project_affine` (see below) to compute the projection. Other useful functions are `np.eye` and `np.diag`. 
+</span><span class="s0">#%% 
+</span><span class="s2">def </span><span class="s1">project_affine(u, A, b):</span>
+    <span class="s0">&quot;&quot;&quot; 
+    Projection onto the set defined by the linear equalities 'Au = b'. 
+    &quot;&quot;&quot;</span>
+    <span class="s2">assert </span><span class="s1">A.ndim == </span><span class="s3">2</span><span class="s1">, </span><span class="s4">&quot;'A' must be a matrix (2 axes)&quot;</span>
+    <span class="s2">assert </span><span class="s1">A.shape[</span><span class="s3">0</span><span class="s1">] == b.shape[</span><span class="s3">0</span><span class="s1">], </span><span class="s4">&quot;The rows of 'b' must be equal to the rows of 'A'&quot;</span>
+    <span class="s2">assert </span><span class="s1">A.shape[</span><span class="s3">1</span><span class="s1">] == u.shape[</span><span class="s3">0</span><span class="s1">], </span><span class="s4">&quot;The rows of 'u' must be equal to the columns of 'A'&quot;</span>
+    <span class="s1">s = np.linalg.solve(A @ A.T, A @ u - b)</span>
+    <span class="s1">p = u - A.T @ s</span>
+    <span class="s2">return </span><span class="s1">p</span>
+
+<span class="s0">#</span>
+<span class="s0"># Use these data in your problem</span>
+<span class="s0">#</span>
+
+<span class="s0"># Number of timesteps</span>
+<span class="s1">T = </span><span class="s3">60  </span>
+
+<span class="s0"># Position of waypoints</span>
+<span class="s1">waypoints = np.array([(</span><span class="s3">4</span><span class="s1">,</span><span class="s3">3</span><span class="s1">), (</span><span class="s3">6</span><span class="s1">,</span><span class="s3">0</span><span class="s1">), (</span><span class="s3">0</span><span class="s1">,</span><span class="s3">0</span><span class="s1">)])</span>
+
+<span class="s0"># Prescribed time for each waypoint</span>
+<span class="s1">times = np.array([</span><span class="s3">19</span><span class="s1">, </span><span class="s3">49</span><span class="s1">, </span><span class="s3">59</span><span class="s1">])</span></pre>
+</body>
+</html>
